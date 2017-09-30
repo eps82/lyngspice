@@ -1,0 +1,6 @@
+Very basic example
+r1 1 2 50
+r2 2 0 50
+vg 1 0 1
+.op
+.end

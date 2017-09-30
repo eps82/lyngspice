@@ -1,0 +1,6 @@
+
+.subckt opamp plus minus out
+rin plus minus 1meg
+e1 outint 0 plus minus 1k
+rout outint out 100
+.ends opamp
