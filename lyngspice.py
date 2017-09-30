@@ -201,7 +201,6 @@ class Dataset(dict):
 
 # ########################################### NGSPICE INTERFACE ############################################### #
 
-
 class NgSpice(object):
   
   def __init__(self, output=None):
@@ -230,9 +229,7 @@ class NgSpice(object):
       sys.stderr.write("No ngspice shared library found in any of the default locations: %s\n" % str(_LIB_PATHS))
       raise FileNotFoundError
     
-    
     self.__attach()
-   
   
   def command(self, command):
       self._shared.ngSpice_Command(c_char_p(command.encode(_encoding)))
@@ -370,11 +367,11 @@ def _BGThreadRunning(is_running, lib_id, p_request=0):
   
 # Same function for voltages and currents (just use different identifiers to tell them apart!)
 @CFUNCTYPE(c_int, POINTER(c_double), c_double, c_char_p, c_int, c_void_p)
-def _GetSRCData(return_value, actual_time, node_name, lib_id, p_request=0):
+def _GetSRCData(return_value, actual_time, node_name, lib_id, p_request=0): 
   node_name = node_name.decode(_encoding)
   if node_name in _external_sources:
     return_value[0] = _external_sources[node_name](actual_time)
-    return 0
+    return 0 
   else:
     sys.stderr.write("Warning: Undefined external source \'%s\'. Returning 0 volts/amperes" % node_name)
     _external_sources[node_name] = lambda t : 0.0
