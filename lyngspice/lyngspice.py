@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # ##################################################################################################
 #
-#          lyngspice v0.1 - A simple single-module wrapper for ngspice
+#          lyngspice v0.2 - A simple single-module wrapper for ngspice
 #
 # Copyright (c) 2017 Ernesto Pérez Serna
 # 
@@ -67,7 +67,7 @@ import os.path
 import sys
 import numpy as np
 from ctypes import c_char_p, c_void_p, c_int, c_short, c_double, c_bool, Structure
-from ctypes import cast, pointer, POINTER, CFUNCTYPE
+from ctypes import cast, pointer, POINTER, CFUNCTYPE, py_object
 try:
   from ctypes import windll as dll
   from _ctypes import FreeLibrary as dlclose
@@ -83,9 +83,6 @@ _LIB_PATHS = {
     'FreeBSD' :   ['/usr/local/lib/libngspice.so']
     }
 
-_ng_out = None
-_external_sources = {}
-_thread_callback = lambda : 0
 _encoding = 'iso8859_15'
 
 _UNITS = [
@@ -204,13 +201,14 @@ class Dataset(dict):
 class NgSpice(object):
   
   def __init__(self, output=None):
-    
-    global _ng_out
+    self._ng_out = None
+    self._external_sources = {}
+    self._thread_callback = lambda is_running, lib_id: 0
     
     if (output is not None):
-      _ng_out = output
-    elif  (_ng_out is None):
-      _ng_out = open(os.devnull, "w")      
+      self._ng_out = output
+    elif  (self._ng_out is None):
+      self._ng_out = open(os.devnull, "w")      
     
     self.running_os = platform.system()
     
@@ -249,12 +247,10 @@ class NgSpice(object):
       return self._shared.ngSpice_Circ(c_netlist)
 
   def add_external_source(self, name, fun):
-    global _external_sources
-    _external_sources[name] = fun
+    self._external_sources[name] = fun
     
   def set_thread_callback(self, fun):
-    global _thread_callback
-    _thread_callback = fun
+    self._thread_callback = fun
   
   # Reload ngspice shared library. Use periodically to minimize leaks
   def reset(self):
@@ -331,17 +327,19 @@ class NgSpice(object):
     
   def __attach(self):
     self._shared = self.__lib_loader(self.lib_path)
-    self._shared.ngSpice_Init(_SendChar,
-                              _SendStat,
-                              _ControlledExit,
-                              _SendData,
-                              _SendInitData,
-                              None,#_BGThreadRunning
-                              0)
+    
+    self._shared.ngSpice_Init(self._SendChar,
+                              self._SendStat,
+                              self._ControlledExit,
+                              self._SendData,
+                              self._SendInitData,
+                              None, #self._BGThreadRunning,
+                              py_object(self))
+    #import pdb; pdb.set_trace()
     self._shared.ngSpice_AllPlots.restype = POINTER(c_char_p)
     self._shared.ngSpice_AllVecs.restype = POINTER(c_char_p)
     self._shared.ngGet_Vec_Info.restype = POINTER(pvector_info)
-    self._shared.ngSpice_Init_Sync(_GetSRCData, _GetSRCData, c_void_p(), pointer(c_int(0)), c_void_p())
+    self._shared.ngSpice_Init_Sync(self._GetSRCData, self._GetSRCData, c_void_p(), pointer(c_int(0)), c_void_p())
 
   def __detach(self):
     self.command('quit')
@@ -359,57 +357,50 @@ class NgSpice(object):
     self.__detach()
     
   
-# ############################################### Callbacks ##################################################### #
+  # ############################################### Callbacks ##################################################### #
 
-@CFUNCTYPE(c_int, c_bool, c_void_p)
-def _BGThreadRunning(is_running, lib_id, p_request=0):
-  return _thread_callback(is_running, lib_id)
+  @staticmethod
+  @CFUNCTYPE(c_int, c_int, c_bool, c_bool, c_int, py_object)
+  def _ControlledExit(exit_status, unloading, exit_upon_quit, lib_id, self):
+    return 0
   
-# Same function for voltages and currents (just use different identifiers to tell them apart!)
-@CFUNCTYPE(c_int, POINTER(c_double), c_double, c_char_p, c_int, c_void_p)
-def _GetSRCData(return_value, actual_time, node_name, lib_id, p_request=0): 
-  node_name = node_name.decode(_encoding)
-  if node_name in _external_sources:
-    return_value[0] = _external_sources[node_name](actual_time)
-    return 0 
-  else:
-    sys.stderr.write("Warning: Undefined external source \'%s\'. Returning 0 volts/amperes" % node_name)
-    _external_sources[node_name] = lambda t : 0.0
-    return_value[0] = 0.0
-    return 1
-
-@CFUNCTYPE(c_char_p, c_int, c_void_p)
-def _SendChar(p_output, lib_id, p_request=0):
-  __log(cast(p_output, c_char_p).value.decode(_encoding))
-  return 0
+  @staticmethod
+  @CFUNCTYPE(c_int, c_bool, c_int, py_object)
+  def _BGThreadRunning(is_running, lib_id, self):
+    return self._thread_callback(is_running, lib_id)
+    
+  # Same function for voltages and currents (just use different identifiers to tell them apart!)
+  @staticmethod
+  @CFUNCTYPE(c_int, POINTER(c_double), c_double, c_char_p, c_int, py_object)
+  def _GetSRCData(return_value, actual_time, node_name, lib_id, self): 
+    node_name = node_name.decode(_encoding)
+    if node_name in self._external_sources:
+      return_value[0] = self._external_sources[node_name](actual_time)
+      return 0 
+    else:
+      sys.stderr.write("Warning: Undefined external source \'%s\'. Returning 0 volts/amperes" % node_name)
+      self._external_sources[node_name] = lambda t : 0.0
+      return_value[0] = 0.0
+      return 1
   
-@CFUNCTYPE(c_char_p, c_int, c_void_p)
-def _SendStat(p_sim_stat, lib_id, p_request=0):
-  __log(cast(p_sim_stat, c_char_p).value.decode(_encoding))
-  return 0
+  @staticmethod
+  @CFUNCTYPE(c_int, c_char_p, c_int, py_object)
+  def _SendChar(p_output, lib_id, self):
+    self._ng_out.write(p_output.decode(_encoding))
+    self._ng_out.write('\n')
+    return 0
+    
+  @staticmethod
+  @CFUNCTYPE(c_int, c_char_p, c_int, py_object)
+  def _SendStat(p_sim_stat, lib_id, self):
+    return 0
+    
+  @staticmethod
+  @CFUNCTYPE(c_int, POINTER(VecValuesAll), c_int, c_int, py_object)
+  def _SendData(p_vecvaluesall, nr_of_structs, lib_id, self):
+    return 0
   
-@CFUNCTYPE(c_int, c_bool, c_bool, c_int, c_void_p)
-def _ControlledExit(exit_status, unloading, exit_upon_quit, lib_id, p_request=0):
-  __log("_ControlledExit() returned %d" % exit_status)
-  return 0
-
-@CFUNCTYPE(None, POINTER(VecValuesAll), c_int, c_int, c_void_p)
-def _SendData(p_vecvaluesall, nr_of_structs, lib_id, p_request=0):
-  #__log(p_vecvaluesall)
-  return 0
-
-@CFUNCTYPE(None, POINTER(VecInfoAll), c_int, c_void_p)
-def _SendInitData(p_vecinfoall, lib_id, p_request=0):
-  __log("SendInitData:")    
-  __log(p_vecinfoall.contents.name.decode(_encoding))
-  __log(p_vecinfoall.contents.title.decode(_encoding))
-  __log(p_vecinfoall.contents.date.decode(_encoding))
-  __log(p_vecinfoall.contents.type.decode(_encoding))
-  __log(p_vecinfoall.contents.veccount)
-  
-  __log("Available vectors:")
-  for x in range(0, p_vecinfoall.contents.veccount):
-      __log(p_vecinfoall.contents.vecs[x].contents.vecname.decode(_encoding))   
-      
-def __log(text):
-  print(text, file=_ng_out)
+  @staticmethod
+  @CFUNCTYPE(c_int, POINTER(VecInfoAll), c_int, py_object)
+  def _SendInitData(p_vecinfoall, lib_id, self):
+    return 0
