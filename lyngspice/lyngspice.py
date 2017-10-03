@@ -66,6 +66,7 @@ import platform
 import os.path
 import sys
 import numpy as np
+from queue import Queue
 from ctypes import c_char_p, c_void_p, c_int, c_short, c_double, c_bool, Structure
 from ctypes import cast, pointer, POINTER, CFUNCTYPE, py_object
 try:
@@ -184,17 +185,10 @@ class VecValuesAll(Structure):
 class Dataset(dict):
   def __init__(self, *args, **kwargs):
     super(Dataset, self).__init__(*args, **kwargs)
-    for key in self:
-      self.__add_as_variable(key)
+    self.__dict__.update(self)
   def __setitem__(self, key, item):
-    #new_key = key not in self
     super(Dataset, self).__setitem__(key, item)
-    self.__add_as_variable(key)
-  def __add_as_variable(self, key):
-    try:
-      exec('self.%s=self[\'%s\']' % (key, key))
-    except:
-      sys.stderr.write("Warning, could not use \'%s\' as property name\n" % key)
+    setattr(self, key, self[key])
 
 # ########################################### NGSPICE INTERFACE ############################################### #
 
@@ -204,6 +198,7 @@ class NgSpice(object):
     self._ng_out = None
     self._external_sources = {}
     self._thread_callback = lambda is_running, lib_id: 0
+    self._msg_queue = Queue()
     
     if (output is not None):
       self._ng_out = output
@@ -230,8 +225,36 @@ class NgSpice(object):
     self.__attach()
   
   def command(self, command):
-      self._shared.ngSpice_Command(c_char_p(command.encode(_encoding)))
+    self._msg_queue_flush()
+    self._shared.ngSpice_Command(c_char_p(command.encode(_encoding)))
       
+  def version(self):
+    self.command('version -f')
+    ngspice, cider, xspice, openmp = [False]*4
+    
+    while self._msg_queue.qsize():
+      s = self._msg_queue.get()
+      if 'ngspice-' in s:
+        ngspice = s.split('-')[1].split(':')[0].strip() # stdout ** ngspice-27 : ....
+      elif 'CIDER' in s:
+        cider = s.split('CIDER')[1].split('(')[0].strip()
+      elif 'XSPICE' in s:
+        xspice = ('extensions included' in s)
+      elif 'OpenMP' in s:
+        openmp = ('enabled' in s)
+    
+    return {
+          'ngspice': ngspice,
+          'CIDER'  : cider,
+          'XSPICE' : xspice,
+          'OpenMP' : openmp 
+          }
+  
+  def _msg_queue_flush(self):
+    while self._msg_queue.qsize():
+      self._msg_queue.get()    
+          
+        
   def load_netlist(self, netlist):
     
     # Load circuit as a file
@@ -386,7 +409,9 @@ class NgSpice(object):
   @staticmethod
   @CFUNCTYPE(c_int, c_char_p, c_int, py_object)
   def _SendChar(p_output, lib_id, self):
-    self._ng_out.write(p_output.decode(_encoding))
+    msg = p_output.decode(_encoding)
+    self._msg_queue.put(msg) 
+    self._ng_out.write(msg)
     self._ng_out.write('\n')
     return 0
     
