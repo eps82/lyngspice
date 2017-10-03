@@ -53,6 +53,8 @@ for n in range(Nmc):
   r2_tol, r1_tol, c2_tol = np.random.normal(1, 0.05, 3) # Return three gaussian random variables of mean=1 and stdvar=0.05
   
   data,_ = ng.run(netlist_non_inverting_lowpass(r2=R2*r2_tol, r1=R1*r1_tol, c2=C2*c2_tol))
+  
+  
   ac = data.ac1
   freq = ac['frequency']
   gain = dB(ac['out'])
@@ -65,11 +67,12 @@ for n in range(Nmc):
     ng.reset()
   
 plt.xticks([1e3, 1e4, 1e5, 1e6, 1e7], ['1k', '10k', '100k', '1M', '10M'])
-plt.title('DC gain across %d samples' % Nmc)
+plt.title('AC gain across %d samples' % Nmc)
 plt.xlabel('Frequency [Hz]')
 plt.ylabel('Gain [dB]')
 plt.grid()
 plt.draw()
+plt.savefig('ac_gain.png')
 
 plt.figure()
 plt.hist(Gdc, bins=20)
@@ -78,6 +81,8 @@ plt.xlabel('DC gain [dB]')
 plt.ylabel('# of samples')
 plt.grid()
 plt.draw()
+plt.savefig('dc_gain.png')
+
 
 plt.show()
 
