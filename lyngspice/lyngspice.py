@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 # ##################################################################################################
 #
-#          lyngspice v0.2 - A simple single-module wrapper for ngspice
+#          lyngspice v0.2.1 - A simple single-module wrapper for ngspice
 #
-# Copyright (c) 2017 Ernesto Pérez Serna
+# Copyright (c) 2018 Ernesto Pérez Serna
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -356,9 +356,9 @@ class NgSpice(object):
                               self._ControlledExit,
                               self._SendData,
                               self._SendInitData,
-                              None, #self._BGThreadRunning,
+                              self._BGThreadRunning,
                               py_object(self))
-    #import pdb; pdb.set_trace()
+    
     self._shared.ngSpice_AllPlots.restype = POINTER(c_char_p)
     self._shared.ngSpice_AllVecs.restype = POINTER(c_char_p)
     self._shared.ngGet_Vec_Info.restype = POINTER(pvector_info)
