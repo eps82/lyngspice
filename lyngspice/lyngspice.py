@@ -66,7 +66,11 @@ import platform
 import os.path
 import sys
 import numpy as np
-from queue import Queue
+# Compatibility Python 2/3 for Queue library
+try:
+	from Queue import Queue
+except ImportError:
+	from queue import Queue
 from ctypes import c_char_p, c_void_p, c_int, c_short, c_double, c_bool, Structure
 from ctypes import cast, pointer, POINTER, CFUNCTYPE, py_object
 try:
