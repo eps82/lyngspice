@@ -332,7 +332,7 @@ class NgSpice(object):
       
       while all_vectors[i]!=None:
         try:  # TODO: Figure out why this is needed for mixed simulations
-          vec = self._shared.ngGet_Vec_Info(c_char_p(all_vectors[i])).contents
+          vec = self._shared.ngGet_Vec_Info(c_char_p(plot_name+b'.'+all_vectors[i])).contents
           vec_name = vec.v_name.decode(_encoding)
           
           if self.is_real(vec.v_flags):
