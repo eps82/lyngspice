@@ -295,7 +295,7 @@ class NgSpice:
 
     def run(self, netlist=None):
         if self.__run(netlist=netlist, background=False):
-            return (),
+            return {}, {}
         else:
             return self.get_data()
 
