@@ -46,7 +46,7 @@ ng = NgSpice()
 netlist = ['R-2R network with external sources']
 for n in range(N):
     netlist.append(f'r{n}_0 {n+1} {n} {(1+(n==0))*R}')
-    netlist.append(f'r{n}_1 a{n} {n+1} 2*R')
+    netlist.append(f'r{n}_1 a{n} {n+1} {2*R}')
     netlist.append(f'va{n} a{n} 0 dc 0 external')
     ng.add_external_source(f'va{n}', generate_bit_generator(N, n, 100e3, 1.0))
 
