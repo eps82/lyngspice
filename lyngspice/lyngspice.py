@@ -206,6 +206,8 @@ class NgSpice:
         self._external_sources = {}
         self._thread_callback = lambda is_running, lib_id: 0
         self._msg_queue = Queue()
+        self._shared = None
+        self._dll_dir = None
 
         self.running_os = platform.system()
 
@@ -414,11 +416,27 @@ class NgSpice:
         self._shared.ngSpice_Init_Sync(self._GetSRCData, self._GetSRCData, None, pointer(c_int(0)), None)
 
     def __detach(self):
-        if hasattr(self, '_shared'):
-            self.command('quit')
-            dlclose(self._shared._handle)
-        if hasattr(self, '_dll_dir'):
-            self._dll_dir.close()
+        if getattr(self, '_shared', None) is not None:
+            try:
+                self.command('quit')
+            finally:
+                handle = self._shared._handle
+                self._shared = None
+                if dlclose is not None:
+                    dlclose(handle)
+        if getattr(self, '_dll_dir', None) is not None:
+            dll_dir = self._dll_dir
+            self._dll_dir = None
+            dll_dir.close()
+
+    def close(self):
+        self.__detach()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
     @staticmethod
     def is_real(v_flags):
@@ -429,7 +447,7 @@ class NgSpice:
         return v_flags & 0b10
 
     def __del__(self):
-        self.__detach()
+        self.close()
 
 
     # ############################################### Callbacks ##################################################### #
