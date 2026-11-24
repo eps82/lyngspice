@@ -310,7 +310,7 @@ class NgSpice:
                 return 1
 
         if self.command(command):
-            sys.stderr.write('Error simulating netlist. NgSpice.command(\'run\') return 1\n')
+            sys.stderr.write('Error simulating netlist. NgSpice.command(\'run\') returned 1\n')
             return 1
 
 
@@ -339,11 +339,11 @@ class NgSpice:
                     vec_name = vec.v_name.decode(_encoding)
 
                     if self.is_real(vec.v_flags):
-                        z = np.ctypeslib.as_array(vec.v_realdata, (vec.v_length,))
+                        z = np.ctypeslib.as_array(vec.v_realdata, (vec.v_length,)).copy()
 
                     elif self.is_complex(vec.v_flags):
-                        x_jy = np.ctypeslib.as_array(cast(vec.v_compdata, POINTER(c_double)), (2*vec.v_length,))
-                        z = np.array(x_jy[0::2], dtype=np.complex64)
+                        x_jy = np.ctypeslib.as_array(cast(vec.v_compdata, POINTER(c_double)), (2*vec.v_length,)).copy()
+                        z = np.array(x_jy[0::2], dtype=np.complex128)
                         if vec_name != 'frequency':
                             z.imag = x_jy[1::2]
                         else:
