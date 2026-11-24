@@ -179,7 +179,15 @@ class VecValuesAll(Structure):
     _fields_ = [('veccount', c_int),    # number of vectors in plot
                 ('vecindex', c_int),    # index of actual set of vectors, i.e. the number of accepted datapoints
                 ('vecsa', POINTER(POINTER(VecValues))) # values of actual set of vectors, indexed from 0 to veccount − 1
-                ] 
+                ]
+
+_SendCharType = CFUNCTYPE(c_int, c_char_p, c_int, py_object)
+_SendStatType = CFUNCTYPE(c_int, c_char_p, c_int, py_object)
+_ControlledExitType = CFUNCTYPE(c_int, c_int, c_bool, c_bool, c_int, py_object)
+_SendDataType = CFUNCTYPE(c_int, POINTER(VecValuesAll), c_int, c_int, py_object)
+_SendInitDataType = CFUNCTYPE(c_int, POINTER(VecInfoAll), c_int, py_object)
+_BGThreadRunningType = CFUNCTYPE(c_int, c_bool, c_int, py_object)
+_GetSRCDataType = CFUNCTYPE(c_int, POINTER(c_double), c_double, c_char_p, c_int, py_object)
 
 class Dataset(dict):
     def __init__(self, *args, **kwargs):
@@ -225,7 +233,7 @@ class NgSpice:
 
     def command(self, command):
         self._msg_queue_flush()
-        self._shared.ngSpice_Command(c_char_p(command.encode(_encoding)))
+        self._shared.ngSpice_Command(command.encode(_encoding))
 
     def version(self):
         self.command('version -f')
@@ -319,7 +327,7 @@ class NgSpice:
         units = Dataset({})
         for plot_name in plot_names:
 
-            all_vectors = self._shared.ngSpice_AllVecs(c_char_p(plot_name))
+            all_vectors = self._shared.ngSpice_AllVecs(plot_name)
             i = 0
             s_plot_name = plot_name.decode(_encoding)
             data[s_plot_name] = {}
@@ -327,7 +335,7 @@ class NgSpice:
 
             while all_vectors[i] is not None:
                 try:  # TODO: Figure out why this is needed for mixed simulations
-                    vec = self._shared.ngGet_Vec_Info(c_char_p(plot_name+b'.'+all_vectors[i])).contents
+                    vec = self._shared.ngGet_Vec_Info(plot_name + b'.' + all_vectors[i]).contents
                     vec_name = vec.v_name.decode(_encoding)
 
                     if self.is_real(vec.v_flags):
@@ -355,18 +363,49 @@ class NgSpice:
             self._dll_dir = os.add_dll_directory(os.path.dirname(lib_path))
         self._shared = self.__lib_loader(lib_path)
 
+        self._shared.ngSpice_Init.argtypes = [
+            _SendCharType,
+            _SendStatType,
+            _ControlledExitType,
+            _SendDataType,
+            _SendInitDataType,
+            _BGThreadRunningType,
+            py_object,
+        ]
+        self._shared.ngSpice_Init.restype = c_int
+
+        self._shared.ngSpice_Init_Sync.argtypes = [
+            _GetSRCDataType,
+            _GetSRCDataType,
+            c_void_p,
+            POINTER(c_int),
+            c_void_p,
+        ]
+        self._shared.ngSpice_Init_Sync.restype = c_int
+
+        self._shared.ngSpice_Command.argtypes = [c_char_p]
+        self._shared.ngSpice_Command.restype = c_int
+
+        self._shared.ngSpice_Circ.argtypes = [POINTER(c_char_p)]
+        self._shared.ngSpice_Circ.restype = c_int
+
+        self._shared.ngSpice_AllPlots.argtypes = []
+        self._shared.ngSpice_AllPlots.restype = POINTER(c_char_p)
+
+        self._shared.ngSpice_AllVecs.argtypes = [c_char_p]
+        self._shared.ngSpice_AllVecs.restype = POINTER(c_char_p)
+
+        self._shared.ngGet_Vec_Info.argtypes = [c_char_p]
+        self._shared.ngGet_Vec_Info.restype = POINTER(pvector_info)
+
         self._shared.ngSpice_Init(self._SendChar,
                                   self._SendStat,
                                   self._ControlledExit,
                                   self._SendData,
                                   self._SendInitData,
                                   self._BGThreadRunning,
-                                  py_object(self))
-
-        self._shared.ngSpice_AllPlots.restype = POINTER(c_char_p)
-        self._shared.ngSpice_AllVecs.restype = POINTER(c_char_p)
-        self._shared.ngGet_Vec_Info.restype = POINTER(pvector_info)
-        self._shared.ngSpice_Init_Sync(self._GetSRCData, self._GetSRCData, c_void_p(), pointer(c_int(0)), c_void_p())
+                                  self)
+        self._shared.ngSpice_Init_Sync(self._GetSRCData, self._GetSRCData, None, pointer(c_int(0)), None)
 
     def __detach(self):
         if hasattr(self, '_shared'):
@@ -390,18 +429,18 @@ class NgSpice:
     # ############################################### Callbacks ##################################################### #
 
     @staticmethod
-    @CFUNCTYPE(c_int, c_int, c_bool, c_bool, c_int, py_object)
+    @_ControlledExitType
     def _ControlledExit(exit_status, unloading, exit_upon_quit, lib_id, self):
         return 0
 
     @staticmethod
-    @CFUNCTYPE(c_int, c_bool, c_int, py_object)
+    @_BGThreadRunningType
     def _BGThreadRunning(is_running, lib_id, self):
         return self._thread_callback(is_running, lib_id)
 
     # Same function for voltages and currents (just use different identifiers to tell them apart!)
     @staticmethod
-    @CFUNCTYPE(c_int, POINTER(c_double), c_double, c_char_p, c_int, py_object)
+    @_GetSRCDataType
     def _GetSRCData(return_value, actual_time, node_name, lib_id, self):
         node_name = node_name.decode(_encoding)
         if node_name in self._external_sources:
@@ -414,7 +453,7 @@ class NgSpice:
             return 1
 
     @staticmethod
-    @CFUNCTYPE(c_int, c_char_p, c_int, py_object)
+    @_SendCharType
     def _SendChar(p_output, lib_id, self):
         msg = p_output.decode(_encoding)
         self._msg_queue.put(msg)
@@ -423,16 +462,16 @@ class NgSpice:
         return 0
 
     @staticmethod
-    @CFUNCTYPE(c_int, c_char_p, c_int, py_object)
+    @_SendStatType
     def _SendStat(p_sim_stat, lib_id, self):
         return 0
 
     @staticmethod
-    @CFUNCTYPE(c_int, POINTER(VecValuesAll), c_int, c_int, py_object)
+    @_SendDataType
     def _SendData(p_vecvaluesall, nr_of_structs, lib_id, self):
         return 0
 
     @staticmethod
-    @CFUNCTYPE(c_int, POINTER(VecInfoAll), c_int, py_object)
+    @_SendInitDataType
     def _SendInitData(p_vecinfoall, lib_id, self):
         return 0
