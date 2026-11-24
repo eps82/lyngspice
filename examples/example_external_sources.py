@@ -42,10 +42,10 @@ def generate_bit_generator(N, n, freq, V0):
 ng = NgSpice()
 netlist = ['R-2R network with external sources']
 for n in range(N):
-    netlist.append('r%d_0 %d %d %f' % (n, n+1, n, (1+(n==0))*R))
-    netlist.append('r%d_1 a%d %d %f' % (n, n, n+1, 2*R))
-    netlist.append('va%d a%d %d dc 0 external' % (n, n, 0))
-    ng.add_external_source('va%d' % n, generate_bit_generator(N, n, 100e3, 1.0))
+    netlist.append(f'r{n}_0 {n+1} {n} {(1+(n==0))*R}')
+    netlist.append(f'r{n}_1 a{n} {n+1} 2*R')
+    netlist.append(f'va{n} a{n} 0 dc 0 external')
+    ng.add_external_source(f'va{n}', generate_bit_generator(N, n, 100e3, 1.0))
 
 netlist += [
     '.tran 10n 20u',
@@ -63,7 +63,7 @@ data, units = ng.run(netlist)
 
 tran = data.tran1
 t = tran['time']*1e6
-v = tran['V(%d)' % (N)]
+v = tran[f'V({N})']
 
 plt.figure()
 plt.plot(t, v)
@@ -76,10 +76,10 @@ plt.savefig('dac.png')
 
 plt.figure()
 for n in range(N):
-    v = tran['a%d' % n]
+    v = tran[f'a{n}']
     plt.plot(t, v + 2*n)
 plt.xlabel('time $[\\mu s]$')
-plt.title('Digital inputs $a_0-a_{%d}$' % (N-1))
+plt.title(f'Digital inputs $a_0-a_{N-1}$')
 plt.yticks(range(2*N+1), 2*N*[''])
 plt.grid()
 plt.draw()

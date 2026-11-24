@@ -25,9 +25,9 @@ def netlist_non_inverting_lowpass(r2, r1, c2):
         'Non-inverting amplifier with single pole',
         '.include opamp_model.cir',
         'vin in 0 dc 0 ac 1',
-        'r2 out 1 %e' % r2,
-        'c2 out 1 %e' % c2,
-        'r1 1 0 %e' % r1,
+        f'r2 out 1 {r2:e}',
+        f'c2 out 1 {c2:e}',
+        f'r1 1 0 {r1:e}',
         'xopamp in 1 out opamp',
         '.ac dec 10 1k 10meg',
         '.end'

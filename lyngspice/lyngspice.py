@@ -471,7 +471,7 @@ class NgSpice:
             return_value[0] = self._external_sources[node_name](actual_time)
             return 0
         else:
-            sys.stderr.write("Warning: Undefined external source \'%s\'. Returning 0 volts/amperes" % node_name)
+            sys.stderr.write(f"Warning: Undefined external source '{node_name}'. Returning 0 volts/amperes")
             self._external_sources[node_name] = lambda t : 0.0
             return_value[0] = 0.0
             return 1
