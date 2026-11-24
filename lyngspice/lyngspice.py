@@ -63,7 +63,7 @@ Results are returned as simple dictionaries. See the examples for extra tips.
 
 import platform
 import os.path
-import sys
+import warnings
 import numpy as np
 from queue import Queue
 from ctypes import c_char_p, c_void_p, c_int, c_short, c_double, c_bool, Structure
@@ -303,11 +303,11 @@ class NgSpice:
         command = 'bg_run' if background else 'run'
         if netlist is not None:
             if self.load_netlist(netlist):
-                sys.stderr.write('Error loading netlist. NgSpice.run() aborted\n')
+                warnings.warn('Error loading netlist. NgSpice.run() aborted', RuntimeWarning, stacklevel=3)
                 return 1
 
         if self.command(command):
-            sys.stderr.write('Error simulating netlist. NgSpice.command(\'run\') returned 1\n')
+            warnings.warn(f"Error simulating netlist. NgSpice.command('{command}') returned 1", RuntimeWarning, stacklevel=3)
             return 1
 
 
@@ -471,7 +471,7 @@ class NgSpice:
             return_value[0] = self._external_sources[node_name](actual_time)
             return 0
         else:
-            sys.stderr.write(f"Warning: Undefined external source '{node_name}'. Returning 0 volts/amperes")
+            warnings.warn(f"Undefined external source '{node_name}'. Returning 0 volts/amperes", RuntimeWarning, stacklevel=2)
             self._external_sources[node_name] = lambda t : 0.0
             return_value[0] = 0.0
             return 1

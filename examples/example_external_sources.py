@@ -53,11 +53,10 @@ netlist += [
 ]
 
 print('########### Netlist #############')
-f = open('dac_netlist.cir', 'w')
-for line in netlist:
-    print(line)
-    f.write(line + '\n')
-f.close()
+with open('dac_netlist.cir', 'w') as f:
+    for line in netlist:
+        print(line)
+        f.write(line + '\n')
 
 data, units = ng.run(netlist)
 
