@@ -1,6 +1,7 @@
 """First example using an external netlist "example_simple.cir"
 """
 
+from pathlib import Path
 from lyngspice import NgSpice
 
 # ##### example_simple.cir #####
@@ -13,9 +14,11 @@ from lyngspice import NgSpice
 # .end                      -----                    -----
 #                            ---                      ---
 
+CIRCUIT = Path(__file__).resolve().parent / 'example_simple.cir'
+
 ng = NgSpice()  # Optionally pass a file handler such as sys.stdout as an argument if interested in ngspice output
-data, units = ng.run('example_simple.cir')  # Simulate and get results as dictionaries. Instead of a file name,
-                                            # run() also accepts a list of strings with each line of the netlist. 
+data, units = ng.run(CIRCUIT)  # Simulate and get results as dictionaries. Instead of a file name,
+                               # run() also accepts a list of strings with each line of the netlist. 
 
 # example_simple.cir only has an .OP analysis, so their results are stored in data['op1']
 # ngspice syntax is respected, so other analyses will be 'tranN', 'acN', 'dcN' and so on

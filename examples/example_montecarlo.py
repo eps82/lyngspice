@@ -13,9 +13,12 @@ represented as a histogram on the second figure.
 
 """
 
+from pathlib import Path
 from matplotlib import pyplot as plt
 import numpy as np
 from lyngspice import NgSpice
+
+OPAMP_MODEL = Path(__file__).resolve().parent / 'opamp_model.cir'
 
 def dB(x):
     return 20*np.log10(np.abs(x))
@@ -23,7 +26,7 @@ def dB(x):
 def netlist_non_inverting_lowpass(r2, r1, c2):
     return [
         'Non-inverting amplifier with single pole',
-        '.include opamp_model.cir',
+        f'.include "{OPAMP_MODEL}"',
         'vin in 0 dc 0 ac 1',
         f'r2 out 1 {r2:e}',
         f'c2 out 1 {c2:e}',

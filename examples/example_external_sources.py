@@ -22,9 +22,12 @@ and simulates it with a 100kHz tone. generate_bit_generator() is used to generat
 function for each bit of the ladder. The results are then plotted.
 """
 
+from pathlib import Path
 from matplotlib import pyplot as plt
 import numpy as np
 from lyngspice import NgSpice
+
+EXAMPLES_DIR = Path(__file__).resolve().parent
 
 N = 4   # Number of bits for the DAC
 R = 50  # Base resistor value (largely irrelevant in this ideal case)
@@ -53,7 +56,7 @@ netlist += [
 ]
 
 print('########### Netlist #############')
-with open('dac_netlist.cir', 'w') as f:
+with open(EXAMPLES_DIR / 'dac_netlist.cir', 'w') as f:
     for line in netlist:
         print(line)
         f.write(line + '\n')
@@ -71,7 +74,7 @@ plt.xlabel('time $[\\mu s]$')
 plt.title('Output voltage')
 plt.grid()
 plt.draw()
-plt.savefig('dac.png')
+plt.savefig(EXAMPLES_DIR / 'dac.png')
 
 plt.figure()
 for n in range(N):
@@ -82,6 +85,6 @@ plt.title(f'Digital inputs $a_0-a_{N-1}$')
 plt.yticks(range(2*N+1), 2*N*[''])
 plt.grid()
 plt.draw()
-plt.savefig('dac_bits.png')
+plt.savefig(EXAMPLES_DIR / 'dac_bits.png')
 
 plt.show()
