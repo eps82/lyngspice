@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Example of AC analysis with random variables (Monte Carlo)
 
 This example generates a netlist as a function of three parameters: two resistances and once capacitance.

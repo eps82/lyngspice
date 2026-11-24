@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # ##################################################################################################
 #
 #          lyngspice v0.2.1 - A simple single-module wrapper for ngspice
@@ -66,11 +65,7 @@ import platform
 import os.path
 import sys
 import numpy as np
-# Compatibility Python 2/3 for Queue library
-try:
-    from Queue import Queue
-except ImportError:
-    from queue import Queue
+from queue import Queue
 from ctypes import c_char_p, c_void_p, c_int, c_short, c_double, c_bool, Structure
 from ctypes import cast, pointer, POINTER, CFUNCTYPE, py_object
 try:
@@ -188,15 +183,15 @@ class VecValuesAll(Structure):
 
 class Dataset(dict):
     def __init__(self, *args, **kwargs):
-        super(Dataset, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.__dict__.update(self)
     def __setitem__(self, key, item):
-        super(Dataset, self).__setitem__(key, item)
+        super().__setitem__(key, item)
         setattr(self, key, self[key])
 
 # ########################################### NGSPICE INTERFACE ############################################### #
 
-class NgSpice(object):
+class NgSpice:
 
     def __init__(self, output=None):
         self._ng_out = None
@@ -262,7 +257,7 @@ class NgSpice(object):
     def load_netlist(self, netlist):
 
         # Load circuit as a file
-        if type(netlist)==str:
+        if isinstance(netlist, str):
             return self.command('source %s' % netlist)
 
         # Load circuit as an array (list) of strings
@@ -316,7 +311,7 @@ class NgSpice(object):
 
         i = 0
         plot_names = []
-        while plots[i]!=None:
+        while plots[i] is not None:
             plot_names.append(plots[i])
             i+= 1
 
@@ -330,7 +325,7 @@ class NgSpice(object):
             data[s_plot_name] = {}
             units[s_plot_name] = {}
 
-            while all_vectors[i]!=None:
+            while all_vectors[i] is not None:
                 try:  # TODO: Figure out why this is needed for mixed simulations
                     vec = self._shared.ngGet_Vec_Info(c_char_p(plot_name+b'.'+all_vectors[i])).contents
                     vec_name = vec.v_name.decode(_encoding)

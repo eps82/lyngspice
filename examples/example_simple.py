@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """First example using an external netlist "example_simple.cir"
 """
 

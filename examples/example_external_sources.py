@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Example of external source definition
 
 External time-domain voltage and current sources take the extra parameter "external":
