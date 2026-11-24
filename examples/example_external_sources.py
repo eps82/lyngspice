@@ -80,9 +80,10 @@ plt.figure()
 for n in range(N):
     v = tran[f'a{n}']
     plt.plot(t, v + 2*n)
+    plt.text(0, 0.5 + 2*n, f'a{n}', fontsize=12, horizontalalignment='center', verticalalignment='center')
 plt.xlabel('time $[\\mu s]$')
 plt.title(f'Digital inputs $a_0-a_{N-1}$')
-plt.yticks(range(2*N+1), 2*N*[''])
+plt.yticks(range(2*N), [f'{i%2}' for i in range(2*N)])
 plt.grid()
 plt.draw()
 plt.savefig(EXAMPLES_DIR / 'dac_bits.png')
