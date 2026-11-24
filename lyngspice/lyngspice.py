@@ -233,7 +233,7 @@ class NgSpice:
 
     def command(self, command):
         self._msg_queue_flush()
-        self._shared.ngSpice_Command(command.encode(_encoding))
+        return self._shared.ngSpice_Command(command.encode(_encoding))
 
     def version(self):
         self.command('version -f')
@@ -298,7 +298,7 @@ class NgSpice:
 
     def run(self, netlist=None):
         if self.__run(netlist=netlist, background=False):
-            return {}
+            return (),
         else:
             return self.get_data()
 
