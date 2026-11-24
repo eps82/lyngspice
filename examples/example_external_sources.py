@@ -33,31 +33,31 @@ R = 50  # Base resistor value (largely irrelevant in this ideal case)
 # Returns a function bit_generator(t) that generates a square wave [0, V0]
 # This wave is the n-th control bit in a N-bit DAC producing a cosine function at 'freq' Hz
 def generate_bit_generator(N, n, freq, V0):
-  def bit_generator(t):
-    x = np.cos(2*np.pi*freq*t)
-    xq = np.round((x+1.0)*((2.0**N)-1.0)/2.0)   # Scale amplitude between 0 and 2**(N-1) and quantize it
-    xqn = (xq//(2**n)) % 2                      # Take the n-th bit
-    return xqn * V0    
-  return bit_generator  
+    def bit_generator(t):
+        x = np.cos(2*np.pi*freq*t)
+        xq = np.round((x+1.0)*((2.0**N)-1.0)/2.0)   # Scale amplitude between 0 and 2**(N-1) and quantize it
+        xqn = (xq//(2**n)) % 2                      # Take the n-th bit
+        return xqn * V0
+    return bit_generator
 
 ng = NgSpice()
 netlist = ['R-2R network with external sources']
 for n in range(N):
-  netlist.append('r%d_0 %d %d %f' % (n, n+1, n, (1+(n==0))*R))
-  netlist.append('r%d_1 a%d %d %f' % (n, n, n+1, 2*R))
-  netlist.append('va%d a%d %d dc 0 external' % (n, n, 0))
-  ng.add_external_source('va%d' % n, generate_bit_generator(N, n, 100e3, 1.0))
-  
+    netlist.append('r%d_0 %d %d %f' % (n, n+1, n, (1+(n==0))*R))
+    netlist.append('r%d_1 a%d %d %f' % (n, n, n+1, 2*R))
+    netlist.append('va%d a%d %d dc 0 external' % (n, n, 0))
+    ng.add_external_source('va%d' % n, generate_bit_generator(N, n, 100e3, 1.0))
+
 netlist += [
     '.tran 10n 20u',
     '.end'
-    ]
+]
 
 print('########### Netlist #############')
 f = open('dac_netlist.cir', 'w')
 for line in netlist:
-  print(line)
-  f.write(line + '\n')
+    print(line)
+    f.write(line + '\n')
 f.close()
 
 data, units = ng.run(netlist)
@@ -77,8 +77,8 @@ plt.savefig('dac.png')
 
 plt.figure()
 for n in range(N):
-  v = tran['a%d' % n]
-  plt.plot(t, v + 2*n)
+    v = tran['a%d' % n]
+    plt.plot(t, v + 2*n)
 plt.xlabel('time $[\mu s]$')
 plt.title('Digital inputs $a_0-a_{%d}$' % (N-1))
 plt.yticks(range(2*N+1), 2*N*[''])

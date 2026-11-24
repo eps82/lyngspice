@@ -2,6 +2,8 @@
 """First example using an external netlist "example_simple.cir"
 """
 
+import sys
+sys.path.append("../lyngspice")
 from lyngspice import NgSpice
 
 # ##### example_simple.cir #####
@@ -24,24 +26,24 @@ data, units = ng.run('example_simple.cir')  # Simulate and get results as dictio
 # For example, data['op1']['V(1)'] is a voltage, so units['op1']['V(1)'] contains ('V', 'voltage')
 # Alternatively, top level dictionaries are accessible as data.op1, units.op1, etc
 
-print("Analyses: " + str(list(data.keys())))
+print(f"Analyses: {list(data.keys())}")
 print()
 
 print("Node voltages:")
-print("V(1)=%f %s" % (data.op1['V(1)'], str(units.op1['V(1)'])))
-print("V(2)=%f %s" % (data.op1['V(2)'], str(units.op1['V(2)'])))  
+print(f"V(1)={data.op1['V(1)'][0]:f} {units.op1['V(1)']}")
+print(f"V(2)={data.op1['V(2)'][0]:f} {units.op1['V(2)']}")
 
 # Generator currents are stored by default with the suffix '#branch'
 print("Generator currents:")
 for vector_name, vector_data in data.op1.items():
-  if '#branch' in vector_name:
-    print("%s=%e %s" % (vector_name, vector_data, str(units.op1[vector_name])))
+    if '#branch' in vector_name:
+        print(f"{vector_name}={vector_data[0]:e} {units.op1[vector_name]}")
     
 # ngspice also returns a series of constants under the name 'const'
 print()
 print("Constants:")
 for constant_name, value in data.const.items():
-  try:
-    print('%s = %e' % (constant_name, value))
-  except:
-    print('%s = %e+j%e' % (constant_name, value.real, value.imag))
+    try:
+        print(f'{constant_name} = {value[0]:e}')
+    except:
+        print(f'{constant_name} = {value[0].real:e}+j{value[0].imag:e}')
