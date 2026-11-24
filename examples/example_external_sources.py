@@ -68,7 +68,7 @@ v = tran['V(%d)' % (N)]
 plt.figure()
 plt.plot(t, v)
 plt.ylabel('Analog output [V]')
-plt.xlabel('time $[\mu s]$')
+plt.xlabel('time $[\\mu s]$')
 plt.title('Output voltage')
 plt.grid()
 plt.draw()
@@ -78,7 +78,7 @@ plt.figure()
 for n in range(N):
     v = tran['a%d' % n]
     plt.plot(t, v + 2*n)
-plt.xlabel('time $[\mu s]$')
+plt.xlabel('time $[\\mu s]$')
 plt.title('Digital inputs $a_0-a_{%d}$' % (N-1))
 plt.yticks(range(2*N+1), 2*N*[''])
 plt.grid()
