@@ -1,8 +1,6 @@
 """First example using an external netlist "example_simple.cir"
 """
 
-import sys
-sys.path.append("../lyngspice")
 from lyngspice import NgSpice
 
 # ##### example_simple.cir #####
