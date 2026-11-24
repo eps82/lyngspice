@@ -79,6 +79,7 @@ _LIB_PATHS = {
     'Linux'   :   ['libngspice.so', '/usr/local/lib/libngspice.so'],
     'Windows' :   ['C:\\Program Files\\Spice\\bin_dll\\ngspice.dll',
                    'C:\\Program Files\\Spice64\\bin_dll\\ngspice.dll',
+                   'C:\\Users\\epese\\Documents\\gemini\\ngspice\\ngspice-47_dll_64\\Spice64_dll\\dll-vs\\ngspice.dll',                   
                    'ngspice.dll'],
     'FreeBSD' :   ['/usr/local/lib/libngspice.so']
     }
@@ -262,8 +263,8 @@ class NgSpice:
     def load_netlist(self, netlist):
 
         # Load circuit as a file
-        if isinstance(netlist, str):
-            return self.command('source %s' % netlist)
+        if isinstance(netlist, (str, os.PathLike)):
+            return self.command(f'source {os.fspath(netlist)}')
 
         # Load circuit as an array (list) of strings
         else:
