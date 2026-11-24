@@ -71,7 +71,7 @@ from ctypes import cast, pointer, POINTER, CFUNCTYPE, py_object
 try:
     from ctypes import windll as dll
     from _ctypes import FreeLibrary as dlclose
-except:
+except ImportError:
     from ctypes import cdll as dll
     from _ctypes import dlclose
 
@@ -219,15 +219,15 @@ class NgSpice:
                 'Windows' : dll.LoadLibrary,
                 'Linux'   : dll.LoadLibrary,
                 'FreeBSD' : dll.LoadLibrary}[self.running_os]
-        except:
-            sys.stderr.write("Unknown operating system: %s\n" % self.running_os)
-            raise OSError
+        except KeyError as exc:
+            raise OSError(f"Unknown operating system: {self.running_os}") from exc
 
         try:
             self.lib_path = list(filter(os.path.isfile, _LIB_PATHS[self.running_os]))[0]
-        except:
-            sys.stderr.write("No ngspice shared library found in any of the default locations: %s\n" % str(_LIB_PATHS))
-            raise FileNotFoundError
+        except IndexError as exc:
+            raise FileNotFoundError(
+                f"No ngspice shared library found in any of the default locations: {_LIB_PATHS[self.running_os]}"
+            ) from exc
 
         self.__attach()
 
@@ -334,26 +334,37 @@ class NgSpice:
             units[s_plot_name] = {}
 
             while all_vectors[i] is not None:
-                try:  # TODO: Figure out why this is needed for mixed simulations
-                    vec = self._shared.ngGet_Vec_Info(plot_name + b'.' + all_vectors[i]).contents
-                    vec_name = vec.v_name.decode(_encoding)
+                vec_ptr = self._shared.ngGet_Vec_Info(plot_name + b'.' + all_vectors[i])
+                # In mixed-mode (analog + XSPICE/event-driven) simulations, ngSpice_AllVecs can
+                # list internal or digital/event vectors that ngGet_Vec_Info cannot return as
+                # analog vectors (yielding a NULL pointer or empty data buffers).
+                if not vec_ptr or not vec_ptr.contents.v_name:
+                    i += 1
+                    continue
 
-                    if self.is_real(vec.v_flags):
-                        z = np.ctypeslib.as_array(vec.v_realdata, (vec.v_length,)).copy()
+                vec = vec_ptr.contents
+                vec_name = vec.v_name.decode(_encoding)
 
-                    elif self.is_complex(vec.v_flags):
-                        x_jy = np.ctypeslib.as_array(cast(vec.v_compdata, POINTER(c_double)), (2*vec.v_length,)).copy()
-                        z = np.array(x_jy[0::2], dtype=np.complex128)
-                        if vec_name != 'frequency':
-                            z.imag = x_jy[1::2]
-                        else:
-                            z = z.real
+                if self.is_real(vec.v_flags) and vec.v_realdata:
+                    z = np.ctypeslib.as_array(vec.v_realdata, (vec.v_length,)).copy()
+                elif self.is_complex(vec.v_flags) and vec.v_compdata:
+                    x_jy = np.ctypeslib.as_array(cast(vec.v_compdata, POINTER(c_double)), (2*vec.v_length,)).copy()
+                    z = np.array(x_jy[0::2], dtype=np.complex128)
+                    if vec_name != 'frequency':
+                        z.imag = x_jy[1::2]
+                    else:
+                        z = z.real
+                else:
+                    # Skip non-analog vectors (e.g., XSPICE event-driven nodes) with no real/complex data
+                    i += 1
+                    continue
 
-                    data[s_plot_name][vec_name] = z
+                data[s_plot_name][vec_name] = z
+                if 0 <= vec.v_type < len(_UNITS):
                     units[s_plot_name][vec_name] = (_UNITS[vec.v_type], _TYPE[vec.v_type])
-                except:
-                    pass
-                i+= 1
+                else:
+                    units[s_plot_name][vec_name] = ('', 'unknown')
+                i += 1
 
         return data, units
 

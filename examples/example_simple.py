@@ -42,7 +42,7 @@ for vector_name, vector_data in data.op1.items():
 print()
 print("Constants:")
 for constant_name, value in data.const.items():
-    try:
-        print(f'{constant_name} = {value[0]:e}')
-    except:
+    if value.dtype.kind == 'c':
         print(f'{constant_name} = {value[0].real:e}+j{value[0].imag:e}')
+    else:
+        print(f'{constant_name} = {value[0]:e}')
