@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lyngspice"
+version = "0.2.1"
+description = "A minimalistic Python wrapper for the ngspice shared library"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Ernesto Pérez Serna" },
+]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy",
+]
+
+[project.optional-dependencies]
+examples = [
+    "matplotlib",
+]
+
+[project.urls]
+Homepage = "https://github.com/eps82/lyngspice"
+Documentation = "https://github.com/eps82/lyngspice/wiki"
+
+[tool.setuptools.packages.find]
+include = ["lyngspice*"]
