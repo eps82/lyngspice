@@ -202,15 +202,10 @@ class Dataset(dict):
 class NgSpice:
 
     def __init__(self, output=None):
-        self._ng_out = None
+        self._ng_out = output
         self._external_sources = {}
         self._thread_callback = lambda is_running, lib_id: 0
         self._msg_queue = Queue()
-
-        if (output is not None):
-            self._ng_out = output
-        elif (self._ng_out is None):
-            self._ng_out = open(os.devnull, "w")
 
         self.running_os = platform.system()
 
@@ -468,8 +463,9 @@ class NgSpice:
     def _SendChar(p_output, lib_id, self):
         msg = p_output.decode(_encoding)
         self._msg_queue.put(msg)
-        self._ng_out.write(msg)
-        self._ng_out.write('\n')
+        if self._ng_out is not None:
+            self._ng_out.write(msg)
+            self._ng_out.write('\n')
         return 0
 
     @staticmethod
